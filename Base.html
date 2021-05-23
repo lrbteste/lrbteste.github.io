@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="description" content="">
+	<meta name="author" content="">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<title>Potree Viewer</title>
+
+	<link rel="stylesheet" type="text/css" href="./libs/potree/potree.css">
+	<link rel="stylesheet" type="text/css" href="./libs/jquery-ui/jquery-ui.min.css">
+	<link rel="stylesheet" type="text/css" href="./libs/openlayers3/ol.css">
+	<link rel="stylesheet" type="text/css" href="./libs/spectrum/spectrum.css">
+	<link rel="stylesheet" type="text/css" href="./libs/jstree/themes/mixed/style.css">
+</head>
+
+<body>
+	<script src="./libs/jquery/jquery-3.1.1.min.js"></script>
+	<script src="./libs/spectrum/spectrum.js"></script>
+	<script src="./libs/jquery-ui/jquery-ui.min.js"></script>
+	<script src="./libs/three.js/build/three.min.js"></script>
+	<script src="./libs/three.js/extra/lines.js"></script>
+	<script src="./libs/other/BinaryHeap.js"></script>
+	<script src="./libs/tween/tween.min.js"></script>
+	<script src="./libs/d3/d3.js"></script>
+	<script src="./libs/proj4/proj4.js"></script>
+	<script src="./libs/openlayers3/ol.js"></script>
+	<script src="./libs/i18next/i18next.js"></script>
+	<script src="./libs/jstree/jstree.js"></script>
+	<script src="./libs/potree/potree.js"></script>
+	<script src="./libs/plasio/js/laslaz.js"></script>
+	
+	<!-- INCLUDE ADDITIONAL DEPENDENCIES HERE -->
+		document.title = "";
+		viewer.setEDLEnabled(False);
+		viewer.setBackground("gradient"); // ["skybox", "gradient", "black", "white"];
+		viewer.setDescription(``);
+	
+	<div class="potree_container" style="position: absolute; width: 100%; height: 100%; left: 0px; top: 0px; ">
+		<div id="potree_render_area" style="background-image: url('./libs/potree/resources/images/background.jpg');"></div>
+		<div id="potree_sidebar_container"> </div>
+	</div>
+	
+	<script>
+
+//defenicoes	
+		window.viewer = new Potree.Viewer(document.getElementById("potree_render_area"));
+		
+		viewer.setEDLEnabled(true);
+		viewer.setFOV(60);
+		viewer.setPointBudget(10_000_000);
+		document.title = "";
+		viewer.setEDLEnabled(false);
+		viewer.setBackground("gradient");
+		viewer.setDescription(`<br><br>Teste - Centro de Braga - Nuvem de Pontos de fácil acesso e partilha`);
+		viewer.loadSettingsFromURL();
+                viewer.useHQ = true;
+		
+		viewer.loadGUI(() => {
+			viewer.setLanguage('en');
+			$("#menu_scene").next().show();
+			viewer.toggleSidebar();
+//nova secção           
+                let section = $(`
+				<h3 id="menu_meta" class="accordion-header ui-widget"><span>Nova secção teste</span></h3>
+				<div class="accordion-content ui-widget pv-menu-list"></div>
+			`);
+			let content = section.last();
+			content.html(`
+			<div class="pv-menu-list">
+				Grupo ÉRRE <br>
+				<br>	
+				LRB
+				
+			</div>
+			`);
+			section.first().click(() => content.slideToggle());
+			section.insertBefore($('#menu_filters'));
+		});
+
+//carregar nuvem de pontos		
+		Potree.loadPointCloud("pointclouds/BRAGA/cloud.js", "Braga", e => {
+                        let scene = viewer.scene;			
+                        let pointcloud = e.pointcloud;
+//anotacoes
+                        scene.addAnnotation([548076.970, 4600138.832, 203.196], {
+				cameraPosition: [548120.970, 4600140.832, 230.196],
+				cameraTarget: [548076.970, 4600138.832, 203.196],
+				title: "Igreja da Lapa"
+			});
+			
+                        scene.addAnnotation([548008.288, 4600165.819, 206.246], {
+				cameraPosition: [548040.288, 4600130.819, 240.246],
+				cameraTarget: [548008.288, 4600165.819, 206.246],
+				title: "Igreja dos Terceiros"
+			});
+
+                        let aRoot = scene.annotations;
+
+				let elTitle = $(`
+				<span>
+					Braga:
+					<img name="action_elevation" src="${Potree.resourcePath}/icons/profile.png" class="annotation-action-icon"/>
+					<img name="action_rgb" src="${Potree.resourcePath}/icons/rgb.png" class="annotation-action-icon"/>
+                                        
+				</span>`);
+
+				elTitle.find("img[name=action_elevation]").click( () => {
+					event.stopPropagation();
+					material.activeAttributeName = "elevation";
+					material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+					material.size = 1;
+					
+				});
+				
+				elTitle.find("img[name=action_rgb]").click( () => {
+					event.stopPropagation();
+					material.activeAttributeName = "rgba";
+					material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+					material.size = 1;
+					
+				});
+                                
+
+				elTitle.toString = () => "Braga";
+				
+
+				let aTreeReturns = new Potree.Annotation({
+					title: elTitle,
+					position: [548060, 4600106, 400],
+					cameraPosition: [548386.2797621144,4599944.227498397,530.0955295602228],
+					cameraTarget: [548061.6915,4600104.127,201.74350000000015],
+				});
+				aRoot.add(aTreeReturns);
+				aTreeReturns.domElement.find(".annotation-action-icon:first").css("filter", "invert(1)");
+
+			
+			let material = pointcloud.material;
+			viewer.scene.addPointCloud(pointcloud);
+			//material.activeAttributeName = "rgba"; 
+			material.size = 1;
+			material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+			material.shape = Potree.PointShape.SQUARE;
+			viewer.fitToScreen();  
+//caixa de corte              
+                        let volume = new Potree.BoxVolume();
+			            volume.position.set(548060, 4600106, 220);
+			            volume.scale.set(400, 410, 80);
+			            volume.clip = true;
+                                    volume.visible = false;
+                                    volume.name = "Caixa de corte";
+			            scene.addVolume(volume);
+
+                        viewer.setClipTask(Potree.ClipTask.SHOW_INSIDE);
+
+		});
+		
+//load photos
+		const cameraParamsPath = ('./pointclouds/BRAGA/img_selected/cameraParams.txt');
+		const imageParamsPath = ('./pointclouds/BRAGA/img_selected/imageParams.txt');
+
+		Potree.OrientedImageLoader.load(cameraParamsPath, imageParamsPath, viewer).then( images => {
+			viewer.scene.addOrientedImages(images);
+		}); 
+             
+
+
+
+     </script>
+	
+  </body>
+</html>
